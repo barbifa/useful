@@ -1,0 +1,54 @@
+//data = what i
+//p_hostName = hostname ex: google.com, fl.cr.br e etc...
+//p_html = http answer
+
+void util_httpPost(char * p_hostname, char * data, char * p_html) noexcept
+{
+	char  buffer[16384];
+	int rBytes, hBytes = 0;
+	char tam[24]; // just big enough
+	char httpRequestPost[2500];
+	size_t plus = strlen(data);
+
+	_ultoa(plus, tam, 10);
+
+	
+	const struct hostent *hostStruct = gethostbyname(p_hostname);
+	if (hostStruct == nullptr) return;
+
+	const SOCKET connSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+	SOCKADDR_IN sockAddr;
+	sockAddr.sin_port = htons(80);
+	sockAddr.sin_family = AF_INET;
+	sockAddr.sin_addr.s_addr = *((unsigned long*)hostStruct->h_addr);
+
+	
+
+	sprintf_s(httpRequestPost, 2500, "POST %s%s%s%s%s%s%s%s%s%s%s", "/components/requestAPI.cfc", " HTTP/1.1\nHost: ", p_hostname,"\r\n", "Connection: close\r\n", "Content-Type: application/x-www-form-urlencoded; charset=utf-8\r\n", "Content-Length: ", tam, "\r\n", "\r\n", data);
+
+
+	connect(connSocket, (SOCKADDR*)(&sockAddr), sizeof(sockAddr));
+	send(connSocket, httpRequestPost, strlen(httpRequestPost), 0);
+
+
+	// Receive until the peer closes the connection
+	do {
+
+		rBytes = recv(connSocket, buffer, 16384, 0);
+		if (rBytes > 0)
+		{
+			printf("Bytes received: %d\n", rBytes);
+			memcpy(p_html + hBytes, buffer, rBytes);
+			hBytes += rBytes;
+		}
+		else if (rBytes == 0)
+			printf("Connection closed\n");
+		else
+			printf("recv failed: %d\n", WSAGetLastError());
+
+	} while (rBytes > 0);
+
+	closesocket(connSocket);
+}
+
